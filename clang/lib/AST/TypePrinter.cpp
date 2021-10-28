@@ -983,6 +983,9 @@ void TypePrinter::printFunctionAfter(const FunctionType::ExtInfo &Info,
     case CC_PreserveMost:
       OS << " __attribute__((preserve_most))";
       break;
+    case CC_ReverseCall:
+      OS << " __attribute__((reverse_call))";
+      break;
     case CC_PreserveAll:
       OS << " __attribute__((preserve_all))";
       break;
@@ -1718,6 +1721,7 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::MSABI: OS << "ms_abi"; break;
   case attr::SysVABI: OS << "sysv_abi"; break;
   case attr::RegCall: OS << "regcall"; break;
+  case attr::ReverseCall: OS << "reverse_call"; break;
   case attr::Pcs: {
     OS << "pcs(";
    QualType t = T->getEquivalentType();

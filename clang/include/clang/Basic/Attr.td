@@ -2567,6 +2567,11 @@ def PreserveMost : DeclOrTypeAttr {
   let Documentation = [PreserveMostDocs];
 }
 
+def ReverseCall : DeclOrTypeAttr {
+  let Spellings = [Clang<"reverse_call">];
+  let Documentation = [ReverseCallDocs];
+}
+
 def PreserveAll : DeclOrTypeAttr {
   let Spellings = [Clang<"preserve_all">];
   let Documentation = [PreserveAllDocs];

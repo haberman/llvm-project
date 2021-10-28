@@ -4864,6 +4864,20 @@ in the future.
   }];
 }
 
+def ReverseCallDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+This calling convention makes all registers available for
+passing arguments, but assigns them in reverse order from the default calling
+convention to reduce the chance of overlap. There are no callee-saved
+registers, and the registers that are callee-save under ``ccc`` are the first
+to be assigned as arguments. This makes it very efficient to perform a series
+of tail calls to other ``reverse_call`` functions in threaded code style, while
+reducing the chance of spills or register shuffles when performing non-tail
+calls to regular fallback functions.
+  }];
+}
+
 def PreserveAllDocs : Documentation {
   let Category = DocCatCallingConvs;
   let Content = [{

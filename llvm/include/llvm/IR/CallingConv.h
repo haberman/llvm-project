@@ -91,6 +91,11 @@ namespace CallingConv {
     /// clean up their stack.
     SwiftTail = 20,
 
+    /// ReverseC - This calling convention makes all registers available for
+    /// arguments, but assigns them in reverse order from CallingConv::C, and
+    /// uses no callee-saved registers.
+    ReverseC = 21,
+
     // Target - This is the start of the target-specific calling conventions,
     // e.g. fastcall and thiscall on X86.
     FirstTargetCC = 64,

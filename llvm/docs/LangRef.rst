@@ -440,6 +440,14 @@ added in the future:
     the GHC or the HiPE convention is used. <CodeGenerator.html#id80>`_ This
     calling convention does not support varargs and requires the prototype of
     all callees to exactly match the prototype of the function definition.
+"``reverse_ccc``" - This calling convention makes all registers available for
+    passing arguments, but assigns them in reverse order from ``ccc`` to reduce
+    the chance of overlap. There are no callee-saved registers, and the
+    registers that are callee-save under ``ccc`` are the first to be assigned
+    as arguments. This makes it very efficient to perform a series of tail
+    calls to other ``reverse_ccc`` functions in threaded code style, while
+    reducing the chance of spills or register shuffles when performing non-tail
+    calls to regular ``ccc`` fallback functions.
 "``swiftcc``" - This calling convention is used for Swift language.
     - On X86-64 RCX and R8 are available for additional integer returns, and
       XMM2 and XMM3 are available for additional FP/vector returns.

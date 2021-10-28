@@ -3156,6 +3156,7 @@ StringRef FunctionType::getNameForCallConv(CallingConv CC) {
   case CC_SwiftAsync: return "swiftasynccall";
   case CC_PreserveMost: return "preserve_most";
   case CC_PreserveAll: return "preserve_all";
+  case CC_ReverseCall: return "reverse_call";
   }
 
   llvm_unreachable("Invalid calling convention.");

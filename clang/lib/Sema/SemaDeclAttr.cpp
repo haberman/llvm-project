@@ -4742,6 +4742,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveAll:
     D->addAttr(::new (S.Context) PreserveAllAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_ReverseCall:
+    D->addAttr(::new (S.Context) ReverseCallAttr(S.Context, AL));
+    return;
   default:
     llvm_unreachable("unexpected attribute kind");
   }
@@ -4912,6 +4915,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveAll:
     CC = CC_PreserveAll;
+    break;
+  case ParsedAttr::AT_ReverseCall:
+    CC = CC_ReverseCall;
     break;
   default: llvm_unreachable("unexpected attribute kind");
   }
@@ -8290,6 +8296,7 @@ static void ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D,
   case ParsedAttr::AT_PreserveMost:
   case ParsedAttr::AT_PreserveAll:
   case ParsedAttr::AT_AArch64VectorPcs:
+  case ParsedAttr::AT_ReverseCall:
     handleCallConvAttr(S, D, AL);
     break;
   case ParsedAttr::AT_Suppress:

@@ -1030,6 +1030,40 @@ def CC_X86_32_HiPE : CallingConv<[
   CCIfType<[i32, f32], CCAssignToStack<4, 4>>
 ]>;
 
+// X86-64 ReverseC calling convention.
+def CC_X86_64_ReverseC : CallingConv<[
+  // Promote i1/i8/i16 arguments to i32.
+  CCIfType<[i1, i8, i16], CCPromoteToType<i32>>,
+
+  // Use all registers, starting with callee-save, ending with ccc
+  // arguments in reverse order.
+  CCIfType<[i32], CCAssignToReg<[
+    // Normally callee-save registers.
+    EBX,
+    //EBP,  // Conflicts with frame pointer when -fno-omit-frame-pointer
+    R12D, R13D, R14D, R15D,
+    // Normally scratch registers.
+    R10D, R11D,
+    // Normally argument registers, in reverse order.
+    R9D, R8D, ECX, EDX, ESI, EDI,
+    // Return register
+    EAX]>>,
+  CCIfType<[i64], CCAssignToReg<[
+    // Normally callee-save registers.
+    RBX,
+    //RBP,  // Conflicts with frame pointer when -fno-omit-frame-pointer
+    R12, R13, R14, R15,
+    // Normally scratch registers.
+    R10, R11,
+    // Normally argument registers, in reverse order.
+    R9, R8, RCX, RDX, RSI, RDI,
+    // Return register
+    RAX]>>,
+
+  // Otherwise it's the same as the regular C calling convention.
+  CCDelegateTo<CC_X86_64_C>
+]>;
+
 // X86-64 Intel OpenCL built-ins calling convention.
 def CC_Intel_OCL_BI : CallingConv<[
 
@@ -1099,7 +1133,9 @@ def CC_X86_64 : CallingConv<[
   CCIfCC<"CallingConv::X86_RegCall",
     CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
+  CCIfCC<"CallingConv::ReverseC", CCDelegateTo<CC_X86_64_ReverseC>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
+
 
   // Mingw64 and native Win64 use Win64 CC
   CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_C>>,
