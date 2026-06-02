@@ -889,6 +889,9 @@ bool Sema::checkMustTailAttr(const Stmt *St, const Attr &MTA) {
                       CalleeType.Func->getReturnType(), ft_return_type))
       return false;
 
+    if (CallerType.Func->getCallConv() == CC_X86_64TailChain)
+      return true;
+
     if (CallerType.Func->getNumParams() != CalleeType.Func->getNumParams()) {
       PD << ft_parameter_arity << CallerType.Func->getNumParams()
          << CalleeType.Func->getNumParams();

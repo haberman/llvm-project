@@ -4319,9 +4319,11 @@ void Verifier::verifyMustTailCall(CallInst &CI) {
   AttributeList CallerAttrs = F->getAttributes();
   AttributeList CalleeAttrs = CI.getAttributes();
   if (CI.getCallingConv() == CallingConv::SwiftTail ||
-      CI.getCallingConv() == CallingConv::Tail) {
+      CI.getCallingConv() == CallingConv::Tail ||
+      CI.getCallingConv() == CallingConv::TAIL_CHAIN) {
     StringRef CCName =
-        CI.getCallingConv() == CallingConv::Tail ? "tailcc" : "swifttailcc";
+        CI.getCallingConv() == CallingConv::Tail ? "tailcc" :
+        CI.getCallingConv() == CallingConv::SwiftTail ? "swifttailcc" : "tail_chaincc";
 
     // - Only sret, byval, swiftself, and swiftasync ABI-impacting attributes
     //   are allowed in swifttailcc call

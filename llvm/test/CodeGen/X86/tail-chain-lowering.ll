@@ -37,11 +37,31 @@ define tail_chaincc void @test_mismatch(
     i64 %i, i64 %j, i64 %k, i64 %l, i64 %m, i64 %n) {
 ; CHECK-LABEL: test_mismatch:
 ; CHECK: # %bb.0:
-; CHECK:      movq 8(%rsp), %rax
-; CHECK-NEXT: movq %rax, 24(%rsp)
-; CHECK-NEXT: popq %rax
-; CHECK:      addq $16, %rsp
+; CHECK:      movq (%rsp), %rax
+; CHECK-NEXT: movq %rax, 16(%rsp)
+; CHECK-NEXT: addq $16, %rsp
 ; CHECK-NEXT: jmp callee_0stack{{(@PLT)?}} # TAILCALL
-  tail call tail_chaincc void @callee_0stack()
+  musttail call tail_chaincc void @callee_0stack()
+  ret void
+}
+
+declare tail_chaincc void @callee_2stack(
+    i64, i64, i64, i64, i64, i64, i64, i64,
+    i64, i64, i64, i64, i64, i64)
+
+define tail_chaincc void @test_less(
+    i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h,
+    i64 %i, i64 %j, i64 %k, i64 %l) {
+; CHECK-LABEL: test_less:
+; CHECK: # %bb.0:
+; CHECK:      subq $16, %rsp
+; CHECK:      movq 16(%rsp), %r10
+; CHECK-NEXT: movq %r10, (%rsp)
+; CHECK-NEXT: movq $13, 8(%rsp)
+; CHECK-NEXT: movq $14, 16(%rsp)
+; CHECK-NEXT: jmp callee_2stack{{(@PLT)?}} # TAILCALL
+  musttail call tail_chaincc void @callee_2stack(
+      i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, i64 %g, i64 %h,
+      i64 %i, i64 %j, i64 %k, i64 %l, i64 13, i64 14)
   ret void
 }
