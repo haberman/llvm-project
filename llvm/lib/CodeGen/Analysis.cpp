@@ -552,7 +552,8 @@ bool llvm::isInTailCallPosition(const CallBase &Call, const TargetMachine &TM,
   // been fully understood.
   if (!Ret && ((!TM.Options.GuaranteedTailCallOpt &&
                 Call.getCallingConv() != CallingConv::Tail &&
-                Call.getCallingConv() != CallingConv::SwiftTail) ||
+                Call.getCallingConv() != CallingConv::SwiftTail &&
+                Call.getCallingConv() != CallingConv::TAIL_CHAIN) ||
                !isa<UnreachableInst>(Term)))
     return false;
 

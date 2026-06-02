@@ -1250,7 +1250,8 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
 static bool canGuaranteeTCO(CallingConv::ID CC) {
   return (CC == CallingConv::Fast || CC == CallingConv::GHC ||
           CC == CallingConv::X86_RegCall || CC == CallingConv::HiPE ||
-          CC == CallingConv::Tail || CC == CallingConv::SwiftTail);
+          CC == CallingConv::Tail || CC == CallingConv::SwiftTail ||
+          CC == CallingConv::TAIL_CHAIN);
 }
 
 /// Return true if we might ever do TCO for calls with this calling convention.
@@ -1261,6 +1262,7 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
   case CallingConv::Win64:
   case CallingConv::X86_64_SysV:
   case CallingConv::PreserveNone:
+  case CallingConv::TAIL_CHAIN:
   // Callee pop conventions:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_StdCall:
@@ -1278,7 +1280,8 @@ static bool mayTailCallThisCC(CallingConv::ID CC) {
 /// changing its ABI.
 static bool shouldGuaranteeTCO(CallingConv::ID CC, bool GuaranteedTailCallOpt) {
   return (GuaranteedTailCallOpt && canGuaranteeTCO(CC)) ||
-         CC == CallingConv::Tail || CC == CallingConv::SwiftTail;
+         CC == CallingConv::Tail || CC == CallingConv::SwiftTail ||
+         CC == CallingConv::TAIL_CHAIN;
 }
 
 bool X86TargetLowering::mayBeEmittedAsTailCall(const CallInst *CI) const {
@@ -1923,7 +1926,8 @@ SDValue X86TargetLowering::LowerFormalArguments(
       MRI.disableCalleeSavedRegister(Pair.first);
   }
 
-  if (CallingConv::PreserveNone == CallConv)
+  if (CallingConv::PreserveNone == CallConv ||
+      CallingConv::TAIL_CHAIN == CallConv)
     for (const ISD::InputArg &In : Ins) {
       if (In.Flags.isSwiftSelf() || In.Flags.isSwiftAsync() ||
           In.Flags.isSwiftError()) {
@@ -2121,7 +2125,13 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // function prototype.
     CallingConv::ID CallerCC = MF.getFunction().getCallingConv();
     isTailCall = (CallConv == CallerCC);
-    IsSibcall = IsMustTail;
+    if (isTailCall && CallConv == CallingConv::TAIL_CHAIN) {
+      unsigned NumBytesCallerPushed = X86Info->getBytesToPopOnReturn();
+      unsigned NumBytesCalleePushed = CCInfo.getAlignedCallFrameSize();
+      IsSibcall = IsMustTail && (NumBytesCallerPushed == NumBytesCalleePushed);
+    } else {
+      IsSibcall = IsMustTail;
+    }
   } else if (isTailCall) {
     // Check if this tail call is a "sibling" call, which is loosely defined to
     // be a tail call that doesn't require heroics like moving the return
@@ -2741,7 +2751,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InGlue = Chain.getValue(1);
   }
 
-  if (CallingConv::PreserveNone == CallConv)
+  if (CallingConv::PreserveNone == CallConv ||
+      CallingConv::TAIL_CHAIN == CallConv)
     for (const ISD::OutputArg &Out : Outs) {
       if (Out.Flags.isSwiftSelf() || Out.Flags.isSwiftAsync() ||
           Out.Flags.isSwiftError()) {

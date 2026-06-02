@@ -467,6 +467,28 @@ def RetCC_X86_32 : CallingConv<[
   CCDelegateTo<RetCC_X86_32_C>
 ]>;
 
+// X86-64 TailChain return-value convention.
+def RetCC_X86_64_TailChain : CallingConv<[
+  // FP values in XMM registers (up to 8 for flattening).
+  CCIfType<[f16], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
+  CCIfType<[f32], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
+  CCIfType<[f64], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
+  CCIfType<[f128], CCAssignToReg<[XMM0, XMM1, XMM2, XMM3, XMM4, XMM5, XMM6, XMM7]>>,
+
+  // Pointers are always returned in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_X86_64_Pointer">>,
+
+  // Integers in expanded pool: RAX, RDX, RCX, R8, R9, R11, R12, R13, R14, R15
+  CCIfType<[i1],  CCPromoteToType<i8>>,
+  CCIfType<[i8] , CCAssignToReg<[AL, DL, CL, R8B, R9B, R11B, R12B, R13B, R14B, R15B]>>,
+  CCIfType<[i16], CCAssignToReg<[AX, DX, CX, R8W, R9W, R11W, R12W, R13W, R14W, R15W]>>,
+  CCIfType<[i32], CCAssignToReg<[EAX, EDX, ECX, R8D, R9D, R11D, R12D, R13D, R14D, R15D]>>,
+  CCIfType<[i64], CCAssignToReg<[RAX, RDX, RCX, R8, R9, R11, R12, R13, R14, R15]>>,
+
+  // Otherwise, drop to standard return rules.
+  CCDelegateTo<RetCC_X86Common>
+]>;
+
 // This is the root return-value convention for the X86-64 backend.
 def RetCC_X86_64 : CallingConv<[
   // HiPE uses RetCC_X86_64_HiPE
@@ -478,6 +500,7 @@ def RetCC_X86_64 : CallingConv<[
   // Handle Swift calls.
   CCIfCC<"CallingConv::Swift", CCDelegateTo<RetCC_X86_64_Swift>>,
   CCIfCC<"CallingConv::SwiftTail", CCDelegateTo<RetCC_X86_64_Swift>>,
+  CCIfCC<"CallingConv::TAIL_CHAIN", CCDelegateTo<RetCC_X86_64_TailChain>>,
 
   // Handle explicit CC selection
   CCIfCC<"CallingConv::Win64", CCDelegateTo<RetCC_X86_Win64_C>>,
@@ -1056,6 +1079,21 @@ def CC_X86_64_Preserve_None : CallingConv<[
   CCDelegateTo<CC_X86_64_C>
 ]>;
 
+def CC_X86_64_TailChain : CallingConv<[
+  // Byval arguments must be passed on the stack.
+  CCIfByVal<CCPassByVal<8, 8>>,
+
+  // Custom register order: R12, R13, R14, R15, R11, R9, R8, RCX, RDX, RSI, RDI, RAX
+  CCIfType<[i32], CCAssignToReg<[R12D, R13D, R14D, R15D, R11D, R9D, R8D,
+                                 ECX, EDX, ESI, EDI, EAX]>>,
+
+  CCIfType<[i64], CCAssignToReg<[R12, R13, R14, R15, R11, R9, R8,
+                                 RCX, RDX, RSI, RDI, RAX]>>,
+
+  // Otherwise it's the same as the regular C calling convention.
+  CCDelegateTo<CC_X86_64_C>
+]>;
+
 //===----------------------------------------------------------------------===//
 // X86 Root Argument Calling Conventions
 //===----------------------------------------------------------------------===//
@@ -1096,6 +1134,7 @@ def CC_X86_64 : CallingConv<[
     CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_RegCall>>>,
   CCIfCC<"CallingConv::X86_RegCall", CCDelegateTo<CC_X86_SysV64_RegCall>>,
   CCIfCC<"CallingConv::PreserveNone", CCDelegateTo<CC_X86_64_Preserve_None>>,
+  CCIfCC<"CallingConv::TAIL_CHAIN", CCDelegateTo<CC_X86_64_TailChain>>,
   CCIfCC<"CallingConv::X86_INTR", CCCustom<"CC_X86_Intr">>,
 
   // Mingw64 and native Win64 use Win64 CC
