@@ -1307,12 +1307,14 @@ class X86_64ABIInfo : public ABIInfo {
 
   ABIArgInfo classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
                                        unsigned &NeededSSE,
-                                       unsigned &MaxVectorWidth) const;
+                                       unsigned &MaxVectorWidth,
+                                       bool IsTailChain = false) const;
 
   bool passRegCallStructTypeDirectly(QualType Ty,
                                      SmallVectorImpl<llvm::Type *> &CoerceElts,
                                      unsigned &NeededInt, unsigned &NeededSSE,
-                                     unsigned &MaxVectorWidth) const;
+                                     unsigned &MaxVectorWidth,
+                                     bool IsTailChain = false) const;
 
   bool IsIllegalVectorType(QualType Ty) const;
 
@@ -2869,10 +2871,22 @@ X86_64ABIInfo::classifyArgumentType(QualType Ty, unsigned freeIntRegs,
 // field should coerce to.
 bool X86_64ABIInfo::passRegCallStructTypeDirectly(
     QualType Ty, SmallVectorImpl<llvm::Type *> &CoerceElts, unsigned &NeededInt,
-    unsigned &NeededSSE, unsigned &MaxVectorWidth) const {
+    unsigned &NeededSSE, unsigned &MaxVectorWidth, bool IsTailChain) const {
 
   auto *RD =
       cast<RecordType>(Ty.getCanonicalType())->getDecl()->getDefinitionOrSelf();
+
+  if (IsTailChain && RD->isUnion()) {
+    uint64_t SizeInBits = getContext().getTypeSize(Ty);
+    uint64_t SizeInBytes = (SizeInBits + 7) / 8;
+    if (SizeInBytes == 0)
+      return true;
+    uint64_t NumElts = (SizeInBytes + 7) / 8;
+    NeededInt += NumElts;
+    CoerceElts.push_back(llvm::ArrayType::get(llvm::Type::getInt64Ty(getVMContext()), NumElts));
+    return true;
+  }
+
   if (RD->hasFlexibleArrayMember())
     return false;
 
@@ -2886,7 +2900,7 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
       if (isEmptyRecord(getContext(), BaseTy, true))
         continue;
       if (!passRegCallStructTypeDirectly(BaseTy, CoerceElts, NeededInt,
-                                         NeededSSE, MaxVectorWidth))
+                                         NeededSSE, MaxVectorWidth, IsTailChain))
         return false;
     }
   }
@@ -2894,11 +2908,11 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
   // Classify the members.
   for (const auto *FD : RD->fields()) {
     QualType MTy = FD->getType();
-    if (MTy->isRecordType() && !MTy->isUnionType()) {
+    if (MTy->isRecordType() && (!MTy->isUnionType() || IsTailChain)) {
       if (isEmptyRecord(getContext(), MTy, true))
         continue;
       if (!passRegCallStructTypeDirectly(MTy, CoerceElts, NeededInt, NeededSSE,
-                                         MaxVectorWidth))
+                                         MaxVectorWidth, IsTailChain))
         return false;
       continue;
     }
@@ -2940,7 +2954,8 @@ bool X86_64ABIInfo::passRegCallStructTypeDirectly(
 ABIArgInfo
 X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
                                          unsigned &NeededSSE,
-                                         unsigned &MaxVectorWidth) const {
+                                         unsigned &MaxVectorWidth,
+                                         bool IsTailChain) const {
   NeededInt = 0;
   NeededSSE = 0;
   MaxVectorWidth = 0;
@@ -2950,7 +2965,7 @@ X86_64ABIInfo::classifyRegCallStructType(QualType Ty, unsigned &NeededInt,
 
   SmallVector<llvm::Type *, 16> CoerceElts;
   if (!passRegCallStructTypeDirectly(Ty, CoerceElts, NeededInt, NeededSSE,
-                                     MaxVectorWidth)) {
+                                     MaxVectorWidth, IsTailChain)) {
     NeededInt = NeededSSE = 0;
     return getIndirectReturnResult(Ty);
   }
@@ -2973,18 +2988,22 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   bool IsRegCall = CallingConv == llvm::CallingConv::X86_RegCall;
+  bool IsTailChain = CallingConv == llvm::CallingConv::TAIL_CHAIN;
 
   // Keep track of the number of assigned registers.
-  unsigned FreeIntRegs = IsRegCall ? 11 : 6;
+  // TAIL_CHAIN has 12 GPRs.
+  unsigned FreeIntRegs = IsTailChain ? 12 : (IsRegCall ? 11 : 6);
   unsigned FreeSSERegs = IsRegCall ? 16 : 8;
   unsigned NeededInt = 0, NeededSSE = 0, MaxVectorWidth = 0;
 
   if (!::classifyReturnType(getCXXABI(), FI, *this)) {
-    if (IsRegCall && FI.getReturnType()->getTypePtr()->isRecordType() &&
-        !FI.getReturnType()->getTypePtr()->isUnionType()) {
+    bool IsRecordRet = IsTailChain ? FI.getReturnType()->getTypePtr()->isRecordType() : FI.getReturnType()->isStructureOrClassType();
+    if ((IsRegCall || IsTailChain) && IsRecordRet) {
       FI.getReturnInfo() = classifyRegCallStructType(
-          FI.getReturnType(), NeededInt, NeededSSE, MaxVectorWidth);
-      if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+          FI.getReturnType(), NeededInt, NeededSSE, MaxVectorWidth, IsTailChain);
+      if (IsTailChain) {
+        // Always direct for TAIL_CHAIN.
+      } else if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
         FreeIntRegs -= NeededInt;
         FreeSSERegs -= NeededSSE;
       } else {
@@ -3025,9 +3044,10 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
        it != ie; ++it, ++ArgNo) {
     bool IsNamedArg = ArgNo < NumRequiredArgs;
 
-    if (IsRegCall && it->type->isStructureOrClassType())
+    bool IsRecordArg = IsTailChain ? it->type->getTypePtr()->isRecordType() : it->type->isStructureOrClassType();
+    if ((IsRegCall || IsTailChain) && IsRecordArg)
       it->info = classifyRegCallStructType(it->type, NeededInt, NeededSSE,
-                                           MaxVectorWidth);
+                                           MaxVectorWidth, IsTailChain);
     else
       it->info = classifyArgumentType(it->type, FreeIntRegs, NeededInt,
                                       NeededSSE, IsNamedArg);
@@ -3036,7 +3056,13 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // eightbyte of an argument, the whole argument is passed on the
     // stack. If registers have already been assigned for some
     // eightbytes of such an argument, the assignments get reverted.
-    if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
+    if (IsTailChain) {
+      // Always direct for TAIL_CHAIN.
+      FreeIntRegs = FreeIntRegs > NeededInt ? FreeIntRegs - NeededInt : 0;
+      FreeSSERegs = FreeSSERegs > NeededSSE ? FreeSSERegs - NeededSSE : 0;
+      if (MaxVectorWidth > FI.getMaxVectorWidth())
+        FI.setMaxVectorWidth(MaxVectorWidth);
+    } else if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
       FreeIntRegs -= NeededInt;
       FreeSSERegs -= NeededSSE;
       if (MaxVectorWidth > FI.getMaxVectorWidth())
