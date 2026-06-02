@@ -3535,6 +3535,7 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_PreserveAll:
   case CC_M68kRTD:
   case CC_PreserveNone:
+  case CC_X86_64TailChain:
   case CC_RISCVVectorCall:
 #define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:
     CC_VLS_CASE(32)

@@ -6851,6 +6851,15 @@ may be changed in the future.
   }];
 }
 
+def TailChainDocs : Documentation {
+  let Category = DocCatCallingConvs;
+  let Content = [{
+On X86-64 targets, this attribute changes the calling convention of a function to tail_chaincc.
+It behaves similarly to preserve_none but is optimized for tail calls with callee-cleanup and custom register order.
+  }];
+}
+
+
 def DeprecatedDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{

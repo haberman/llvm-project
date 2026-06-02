@@ -5546,6 +5546,9 @@ static void handleCallConvAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   case ParsedAttr::AT_PreserveNone:
     D->addAttr(::new (S.Context) PreserveNoneAttr(S.Context, AL));
     return;
+  case ParsedAttr::AT_TailChain:
+    D->addAttr(::new (S.Context) TailChainAttr(S.Context, AL));
+    return;
   case ParsedAttr::AT_RISCVVectorCC:
     D->addAttr(::new (S.Context) RISCVVectorCCAttr(S.Context, AL));
     return;
@@ -5816,6 +5819,9 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_PreserveNone:
     CC = CC_PreserveNone;
+    break;
+  case ParsedAttr::AT_TailChain:
+    CC = CC_X86_64TailChain;
     break;
   case ParsedAttr::AT_RISCVVectorCC:
     CC = CC_RISCVVectorCall;
@@ -8066,6 +8072,7 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_AArch64SVEPcs:
   case ParsedAttr::AT_M68kRTD:
   case ParsedAttr::AT_PreserveNone:
+  case ParsedAttr::AT_TailChain:
   case ParsedAttr::AT_RISCVVectorCC:
   case ParsedAttr::AT_RISCVVLSCC:
     handleCallConvAttr(S, D, AL);

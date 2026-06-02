@@ -1839,6 +1839,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_M68kRTD:
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   case CC_PreserveNone:
+  case CC_X86_64TailChain:
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
   case CC_RISCVVectorCall:
     return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;

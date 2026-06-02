@@ -3562,6 +3562,12 @@ def PreserveNone : DeclOrTypeAttr,
   let Documentation = [PreserveNoneDocs];
 }
 
+def TailChain : DeclOrTypeAttr, TargetSpecificAttr<TargetX86_64> {
+  let Spellings = [Clang<"tail_chain">];
+  let Subjects = SubjectList<[FunctionLike]>;
+  let Documentation = [TailChainDocs];
+}
+
 def RISCVVectorCC: DeclOrTypeAttr, TargetSpecificAttr<TargetRISCV> {
  let Spellings = [CXX11<"riscv", "vector_cc">,
                   C23<"riscv", "vector_cc">,

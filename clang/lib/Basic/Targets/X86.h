@@ -789,6 +789,7 @@ public:
     case CC_PreserveMost:
     case CC_PreserveAll:
     case CC_PreserveNone:
+    case CC_X86_64TailChain:
     case CC_X86RegCall:
       return CCCR_OK;
     case CC_DeviceKernel:
@@ -947,6 +948,7 @@ public:
     case CC_PreserveMost:
     case CC_PreserveAll:
     case CC_PreserveNone:
+    case CC_X86_64TailChain:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:
@@ -1036,6 +1038,7 @@ public:
     case CC_PreserveMost:
     case CC_PreserveAll:
     case CC_PreserveNone:
+    case CC_X86_64TailChain:
     case CC_X86_64SysV:
     case CC_Swift:
     case CC_SwiftAsync:

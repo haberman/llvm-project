@@ -105,6 +105,8 @@ unsigned CodeGenTypes::ClangCallConvToLLVMCallConv(CallingConv CC) {
     return llvm::CallingConv::M68k_RTD;
   case CC_PreserveNone:
     return llvm::CallingConv::PreserveNone;
+  case CC_X86_64TailChain:
+    return llvm::CallingConv::TAIL_CHAIN;
     // clang-format off
   case CC_RISCVVectorCall: return llvm::CallingConv::RISCV_VectorCall;
     // clang-format on
@@ -313,6 +315,9 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 
   if (D->hasAttr<PreserveNoneAttr>())
     return CC_PreserveNone;
+
+  if (D->hasAttr<TailChainAttr>())
+    return CC_X86_64TailChain;
 
   if (D->hasAttr<RISCVVectorCCAttr>())
     return CC_RISCVVectorCall;
