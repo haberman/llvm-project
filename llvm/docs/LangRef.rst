@@ -471,6 +471,15 @@ added in the future:
     purpose registers (e.g., floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard C calling
     convention. Currently it is for x86_64, AArch64 and LoongArch only.
+"``tail_chaincc``" - The `TailChain` calling convention
+    This calling convention is designed for high-performance interpreters that
+    rely heavily on guaranteed tail calls. It behaves similarly to
+    `preserve_nonecc` (preserving no general registers except RBP) but features:
+    - Callee-cleanup mechanics for stack arguments, allowing `musttail` calls
+      where caller and callee prototypes do not match.
+    - Custom register allocation order to minimize register clobbering when
+      interposed with standard or `preserve_mostcc` calls.
+    - Currently supported on x86_64 only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style Thread Local Storage
     (TLS). The access function generally has an entry block, an exit block and an
@@ -14038,14 +14047,14 @@ This instruction requires several arguments:
       long as the non-varargs prefixes obey the other rules.
    -  The return type must not undergo automatic conversion to an `sret` pointer.
 
-   In addition, if the calling convention is not `swifttailcc` or `tailcc`:
+   In addition, if the calling convention is not `swifttailcc`, `tailcc`, or `tail_chaincc`:
 
    -  All ABI-impacting function attributes, such as sret, byval, inreg,
       returned, and inalloca, must match.
    -  The caller and callee prototypes must match. Pointer types of parameters
       or return types do not differ in address space.
 
-   On the other hand, if the calling convention is `swifttailcc` or `tailcc`:
+   On the other hand, if the calling convention is `swifttailcc`, `tailcc`, or `tail_chaincc`:
 
    -  Only these ABI-impacting attributes attributes are allowed: sret, byval,
       swiftself, and swiftasync.

@@ -89,6 +89,9 @@ namespace CallingConv {
     /// Used for runtime calls that preserves none general registers.
     PreserveNone = 21,
 
+    /// Tail call convention that preserves none general registers.
+    TAIL_CHAIN = 31,
+
     /// This is the start of the target-specific calling conventions, e.g.
     /// fastcall and thiscall on X86.
     FirstTargetCC = 64,

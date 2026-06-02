@@ -355,6 +355,7 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::PreserveMost:  Out << "preserve_mostcc"; break;
   case CallingConv::PreserveAll:   Out << "preserve_allcc"; break;
   case CallingConv::PreserveNone:  Out << "preserve_nonecc"; break;
+  case CallingConv::TAIL_CHAIN: Out << "tail_chaincc"; break;
   case CallingConv::CXX_FAST_TLS:  Out << "cxx_fast_tlscc"; break;
   case CallingConv::GHC:           Out << "ghccc"; break;
   case CallingConv::Tail:          Out << "tailcc"; break;
